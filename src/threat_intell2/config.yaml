@@ -1,0 +1,13 @@
+headers:
+  User-Agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.82 Safari/537.36'
+
+websites:
+  - "https://www.crowdstrike.com/blog/category/threat-intel-research/"
+  - "https://www.wiz.io/blog/tag/research"
+  - "https://www.mandiant.com/resources/blog"
+  - "https://www.microsoft.com/en-us/security/blog/topic/threat-intelligence/"
+
+rate_limit: 1  # Requests per second
+max_concurrent: 5  # Maximum number of concurrent requests
+max_retries: 3
+retry_delay: 5
