@@ -1,4 +1,4 @@
-# python generated files
+# Python generated files
 __pycache__/
 *.py[cod]
 *$py.class
@@ -20,7 +20,7 @@ wheels/
 .installed.cfg
 *.egg
 
-# venv
+# Python virtual environment
 venv/
 env/
 ENV/
@@ -40,15 +40,11 @@ Thumbs.db
 .env
 *.log
 
-
 # Jupyter Notebook
 .ipynb_checkpoints
 
 # pyenv
 .python-version
-
-# dotenv
-.env
 
 # OpenAI API key file (if you're using a separate file)
 openai_api_key.txt
@@ -58,3 +54,15 @@ openai_api_key.txt
 *.txt
 !requirements.txt
 
+# Cache files
+*.sqlite
+*.db
+
+# Log files
+*.log
+
+# Temporary files
+*.tmp
+
+# Dependency directories (if using npm or yarn)
+node_modules/
