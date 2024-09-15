@@ -22,7 +22,7 @@ import tiktoken
 
 # Initialize NLP model for entity extraction
 try:
-    nlp = spacy.load("en_core_web_sm")  # Ensure you have installed the spaCy model
+    nlp = spacy.load("en_core_web_sm")  
 except OSError:
     import subprocess
     subprocess.run(["python", "-m", "spacy", "download", "en_core_web_sm"])
