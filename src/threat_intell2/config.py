@@ -13,6 +13,10 @@ HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
 }
 
+
+# Number of articles to scrape per website
+ARTICLES_PER_WEBSITE = 1  # Adjust this number as needed
+
 # Websites to scrape
 WEBSITES = [
     "https://www.crowdstrike.com/blog/category/threat-intel-research/",
