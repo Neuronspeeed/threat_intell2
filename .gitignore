@@ -50,6 +50,7 @@ Thumbs.db
 openai_api_key.txt
 
 # Output files
+outputs/*
 *.json
 *.txt
 !requirements.txt
@@ -66,3 +67,10 @@ openai_api_key.txt
 
 # Dependency directories (if using npm or yarn)
 node_modules/
+
+# Keep poetry files
+!pyproject.toml
+!poetry.lock
+
+# Keep the outputs directory but ignore its contents
+!outputs/.gitkeep

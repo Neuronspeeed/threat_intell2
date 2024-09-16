@@ -43,4 +43,5 @@ dependencies = [
     "spacy>=3.7.6",
     "pip>=24.2",
     "tiktoken>=0.7.0",
+    "asyncio>=3.4.3",
 ]
