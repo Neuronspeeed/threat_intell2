@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "threat-intell2"
 version = "0.1.0"
-description = "A project for scraping and analyzing cybersecurity threat intelligence data."
-authors = ["Your Name <youremail@example.com>"]
+description = "Scraping and analyzing cybersecurity threat intelligence data."
+authors = ["Andrei Moise neuronspeeed@gmail.com>"]
 license = "MIT"
 
 [tool.poetry.dependencies]
