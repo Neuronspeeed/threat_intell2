@@ -8,40 +8,46 @@ license = "MIT"
 [tool.poetry.dependencies]
 python = "^3.8"
 aiohttp = "^3.8.1"
-aiohttp-client-cache = "^0.5.0"
+aiohttp-client-cache = "^0.11.1"
 beautifulsoup4 = "^4.10.0"
-goose3 = "^3.1.0"
+goose3 = "^3.1.19"
 pydantic = "^2.0.0"
-langchain = "^0.0.1"
+langchain = "^0.0.200"
 tenacity = "^8.0.1"
-python-dotenv = "^0.19.2"
-openai = "^0.27.0"
-langgraph = "^0.0.10"  # Updated this line to use the latest version
+python-dotenv = "^1.0.0"
+openai = "^1.45.1"
+langgraph = "^0.2.21"
 asyncio = "^3.4.3"
-typing = "^3.7.4"
+spacy = "^3.7.2"
+en-core-web-trf = {url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_trf-3.7.1/en_core_web_trf-3.7.1-py3-none-any.whl"}
+en-core-web-lg = {url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.7.1/en_core_web_lg-3.7.1-py3-none-any.whl"}
+en-core-web-sm = {url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl"}
+torch = "^2.1.0"
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
-name = "threat-intell2"
+name = "threat_intell2"
 version = "0.1.0"
-description = "A threat intelligence analysis tool"
-authors = ["Your Name <your.email@example.com>"]
+description = "Advanced Threat Intelligence Tool"
 dependencies = [
+    "langchain>=0.0.200",
+    "tenacity>=8.1.0",
     "langgraph>=0.2.21",
     "aiohttp>=3.10.5",
     "aiohttp-client-cache>=0.11.1",
-    "bs4>=0.0.2",
+    "beautifulsoup4>=4.10.0",
     "goose3>=3.1.19",
-    "langchain>=0.3.0",
-    "langchain-community>=0.3.0",
-    "openai>=1.45.0",
+    "langchain-community>=0.0.3",
+    "openai>=1.45.1",
     "aiosqlite>=0.20.0",
     "langchain-openai>=0.2.0",
     "spacy>=3.7.6",
+    "spacy-curated-transformers>=0.2.2",
     "pip>=24.2",
     "tiktoken>=0.7.0",
     "asyncio>=3.4.3",
+    "torch>=2.4.1",
 ]

@@ -74,3 +74,5 @@ node_modules/
 
 # Keep the outputs directory but ignore its contents
 !outputs/.gitkeep
+
+todo.md

@@ -1,120 +1,128 @@
 from typing import List, Dict, Any
 from ..utils.logging_config import logger
 from ..utils.text_processing import chunk_text
-from langchain_openai import ChatOpenAI
-from langchain.prompts import ChatPromptTemplate
-from langchain.schema import HumanMessage
+from openai import OpenAI
+from openai import OpenAIError
 from ..config import OPENAI_API_KEY, DEFAULT_MODEL
-from ..models.data_models import Article
 import json
+from ..models.data_models import Article
 from ..models.data_models import ThreatLandscapeItem
+from ..processors.entity_extractor import extract_entities
+from tenacity import retry, stop_after_attempt, wait_random_exponential
+import re
 
+client = OpenAI(api_key=OPENAI_API_KEY)
 
-llm = ChatOpenAI(model_name=DEFAULT_MODEL, api_key=OPENAI_API_KEY)
-
-def analyze_data(articles: List[Article]) -> Dict[str, Any]:
-    logger.info("START: Data Analysis")
+@retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(3))
+def analyze_chunk(chunk):
     try:
-        summarized_reports = []
-        for article in articles:
-            report = f"Title: {article.title}\nURL: {article.url}\n"
-            if article.summary:
-                report += f"Summary: {article.summary}\n"
-            if article.threat_actors:
-                report += "Threat Actors:\n"
-                for actor in article.threat_actors:
-                    report += f"- {', '.join(actor.names)}\n"
-                    if actor.summary:
-                        report += f"  Summary: {actor.summary}\n"
-                    if actor.motivation:
-                        report += f"  Motivation: {actor.motivation}\n"
-                    if actor.targets:
-                        report += f"  Targets: {', '.join(actor.targets)}\n"
-                    if actor.tactics:
-                        report += f"  Tactics: {', '.join(actor.tactics)}\n"
-                    if actor.techniques:
-                        report += f"  Techniques: {', '.join(actor.techniques)}\n"
-                    if actor.procedures:
-                        report += f"  Procedures: {', '.join(actor.procedures)}\n"
-                    if actor.related_iocs:
-                        report += f"  Related IOCs: {', '.join(actor.related_iocs)}\n"
-            if article.ttps:
-                report += "TTPs:\n"
-                for ttp in article.ttps:
-                    report += f"- Tactic: {ttp.tactic}, Technique: {ttp.technique}\n"
-                    if ttp.procedure:
-                        report += f"  Procedure: {ttp.procedure}\n"
-            if article.iocs:
-                report += "IOCs:\n"
-                for ioc in article.iocs:
-                    report += f"- Type: {ioc.type}, Value: {ioc.value}\n"
-            summarized_reports.append(report)
-        
-        combined_summary = "\n\n".join(summarized_reports)
-        
-        tokens_per_chunk = 7000
-        chunks = chunk_text(combined_summary, max_tokens=tokens_per_chunk)
-        logger.info(f"Data Analysis will be performed on {len(chunks)} chunks.")
-        
-        analyses = []
-        
-        for idx, chunk in enumerate(chunks, 1):
-            prompt = ChatPromptTemplate.from_messages([
-                HumanMessage(content=(
-                    "As an expert threat intelligence analyst, provide a comprehensive analysis of the following summarized threat intelligence reports. "
-                    "Focus on threat actors, their tactics, techniques, procedures, and indicators of compromise. "
-                    "Your analysis should be detailed, actionable, and structured as follows:\n\n"
-                    "1. Executive Summary: Brief overview of key findings.\n"
-                    "2. Threat Actors: Detailed analysis of identified threat actors, their motivations, capabilities, and potential impacts.\n"
-                    "3. Threat Landscape: Detailed analysis of the current threat environment, including emerging threats and trends.\n"
-                    "4. TTPs: Analysis of the tactics, techniques, and procedures used by the threat actors.\n"
-                    "5. IOCs: List and analysis of the indicators of compromise associated with the threats.\n"
-                    "6. Global Impact: Assessment of the potential global impact of these threats.\n"
-                    "7. Recommendations: Actionable mitigation strategies and defense recommendations.\n\n"
-                    "Output the analysis in a structured JSON format, ensuring all sections are included.\n\n"
-                    f"Analyze the following data:\n{chunk}"
-                ))
-            ])
-            
-            logger.debug(f"Sending chunk {idx} to GPT-4 for analysis.")
-            try:
-                response = llm.invoke(prompt.format_messages())
-                analysis = json.loads(response.content)
-                analyses.append(analysis)
-                logger.debug(f"Received analysis for chunk {idx}.")
-            except json.JSONDecodeError as e:
-                logger.error(f"Failed to parse GPT-4 response for chunk {idx}: {e}")
-                logger.debug(f"Raw response: {response.content}")
-            except Exception as e:
-                logger.error(f"Failed to analyze chunk {idx}: {e}")
-        
-        if not analyses:
-            raise ValueError("No analyses were generated")
-
-        final_analysis = {
-            "executive_summary": "\n".join([a.get("Executive Summary", "") for a in analyses]),
-            "threat_actors": [actor for a in analyses for actor in a.get("Threat Actors", [])],
-            "threat_landscape": {
-                "overview": "\n".join([a.get("Threat Landscape", {}).get("overview", "") for a in analyses]),
-                "emerging_threats": [threat for a in analyses for threat in a.get("Threat Landscape", {}).get("emerging_threats", [])]
-            },
-            "ttps": [ttp for a in analyses for ttp in a.get("TTPs", [])],
-            "iocs": [ioc for a in analyses for ioc in a.get("IOCs", [])],
-            "global_impact": {
-                "overall": "\n".join([a.get("Global Impact", {}).get("overall", "") for a in analyses])
-            },
-            "recommendations": [rec for a in analyses for rec in a.get("Recommendations", [])]
-        }
-        logger.info("END: Data Analysis completed successfully.")
-        return final_analysis
-    except Exception as e:
-        logger.error(f"ERROR: Data Analysis failed - {e}")
+        response = client.chat.completions.create(
+            model=DEFAULT_MODEL,
+            messages=[
+                {"role": "system", "content": "You are a cybersecurity analyst specializing in threat intelligence. Your task is to analyze the given text and provide a structured JSON response."},
+                {"role": "user", "content": (
+                    "Analyze the following text and provide a JSON response with these keys: "
+                    "'Executive_Summary', 'Threat_Actors', 'TTPs', 'IOCs', 'Global_Impact', 'Recommendations'. "
+                    "Ensure all values are strings, and use empty strings for any sections without relevant information. "
+                    "Format lists as comma-separated strings within quotes. "
+                    "Your response should be a valid JSON object.\n\n"
+                    f"Text to analyze:\n{chunk}"
+                )}
+            ],
+            temperature=0,
+            max_tokens=1000
+        )
+        content = response.choices[0].message.content
+        # Attempt to parse JSON immediately to catch any issues
+        parsed_content = json.loads(content)
+        # Ensure all keys are present
+        for key in ['Executive_Summary', 'Threat_Actors', 'TTPs', 'IOCs', 'Global_Impact', 'Recommendations']:
+            if key not in parsed_content:
+                parsed_content[key] = ""
         return {
-            "executive_summary": f"Analysis failed: {str(e)}",
-            "threat_actors": [],
-            "threat_landscape": {"overview": "Analysis failed", "emerging_threats": []},
-            "ttps": [],
-            "iocs": [],
-            "global_impact": {"overall": "Analysis failed"},
-            "recommendations": []
+            'Executive_Summary': parsed_content.get('Executive_Summary', ''),
+            'Threat_Actors': parsed_content.get('Threat_Actors', '').split(', '),
+            'TTPs': parsed_content.get('TTPs', '').split(', '),
+            'IOCs': parsed_content.get('IOCs', '').split(', '),
+            'Global_Impact': parsed_content.get('Global_Impact', ''),
+            'Recommendations': parsed_content.get('Recommendations', '').split(', ')
         }
+    except json.JSONDecodeError as json_err:
+        logger.error(f"Invalid JSON response from OpenAI: {str(json_err)}")
+        logger.debug(f"Raw response: {content}")
+        return {
+            'Executive_Summary': content,
+            'Threat_Actors': [],
+            'TTPs': [],
+            'IOCs': [],
+            'Global_Impact': '',
+            'Recommendations': []
+        }
+    except OpenAIError as e:
+        logger.error(f"OpenAI API error: {str(e)}")
+        raise
+
+def salvage_analysis(analysis_str: str) -> Dict[str, Any]:
+    salvaged = {}
+    keys = ['Executive_Summary', 'Threat_Actors', 'TTPs', 'IOCs', 'Global_Impact', 'Recommendations']
+    for key in keys:
+        pattern = rf'"{key}"\s*:\s*"([^"]*)"'
+        match = re.search(pattern, analysis_str, re.DOTALL)
+        if match:
+            salvaged[key] = match.group(1).strip().split(', ')
+        else:
+            salvaged[key] = []
+    return salvaged if any(salvaged.values()) else None
+
+def combine_article_analyses(analyses: List[Dict[str, Any]]) -> Dict[str, Any]:
+    combined = {
+        "Executive_Summary": "",
+        "Threat_Actors": [],
+        "TTPs": [],
+        "IOCs": [],
+        "Global_Impact": "",
+        "Recommendations": []
+    }
+    for analysis in analyses:
+        combined["Executive_Summary"] += analysis.get("Executive_Summary", "") + " "
+        combined["Threat_Actors"].extend(analysis.get("Threat_Actors", []))
+        combined["TTPs"].extend(analysis.get("TTPs", []))
+        combined["IOCs"].extend(analysis.get("IOCs", []))
+        combined["Global_Impact"] += analysis.get("Global_Impact", "") + " "
+        combined["Recommendations"].extend(analysis.get("Recommendations", []))
+    
+    # Deduplicate lists
+    combined["Threat_Actors"] = list({actor for actor in combined["Threat_Actors"] if actor})
+    combined["TTPs"] = list({ttp for ttp in combined["TTPs"] if ttp})
+    combined["IOCs"] = list({ioc for ioc in combined["IOCs"] if ioc})
+    combined["Recommendations"] = list({rec for rec in combined["Recommendations"] if rec})
+    
+    combined["Executive_Summary"] = combined["Executive_Summary"].strip()
+    combined["Global_Impact"] = combined["Global_Impact"].strip()
+    
+    return combined
+
+def analyze_data(articles: List[Article]) -> List[Dict[str, Any]]:
+    logger.info("START: Data Analysis")
+    all_analyses = []
+
+    for article in articles:
+        chunks = chunk_text(article.text)
+        article_analysis = []
+        for chunk in chunks:
+            try:
+                analysis = analyze_chunk(chunk)
+                article_analysis.append(analysis)
+            except Exception as e:
+                logger.error(f"Error analyzing chunk from article {article.title}: {str(e)}")
+        
+        if article_analysis:
+            combined_analysis = combine_article_analyses(article_analysis)
+            all_analyses.append({
+                "title": article.title,
+                "url": str(article.url),  # Ensure Url object is converted to string
+                "analysis": combined_analysis
+            })
+
+    logger.info("END: Data Analysis completed successfully.")
+    return all_analyses

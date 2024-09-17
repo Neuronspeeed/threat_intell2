@@ -9,7 +9,6 @@ class TTP(BaseModel):
     technique: str
     procedure: Optional[str] = None
     mitre_id: Optional[str] = None
-    confidence: float = Field(default=0.5, ge=0, le=1)
     related_actors: List[str] = []
 
 
@@ -50,14 +49,27 @@ class Article(BaseModel):
     related_articles: List[str] = []
     tags: List[str] = []
 
+    def dict(self, *args, **kwargs):
+        d = super().dict(*args, **kwargs)
+        d['url'] = str(d['url'])  # Convert Url to string
+        return d
+
+
+
+class ThreatItem(BaseModel):
+    description: str
+    severity: Optional[str] = None
+
+class RecommendationItem(BaseModel):
+    description: str
+    priority: Optional[str] = None
 
 class Analysis(BaseModel):
     executive_summary: str
-    threat_landscape: Dict[str, Any]
-    emerging_threats: List[Dict[str, Any]]
-    global_impact: Dict[str, Any]
-    recommendations: List[Dict[str, Any]]
-    confidence: float = Field(ge=0, le=1)
+    threat_landscape: Dict[str, Dict[str, str]] = Field(default_factory=dict)
+    emerging_threats: List[ThreatItem] = Field(default_factory=list)
+    global_impact: str
+    recommendations: List[RecommendationItem] = Field(default_factory=list)
 
 
 class ThreatIntelligenceReport(BaseModel):
@@ -85,3 +97,11 @@ class ThreatLandscapeItem(BaseModel):
     category: str
     description: str
     metrics: Dict[str, Any] = {}
+
+class ThreatAnalysis(BaseModel):
+    Executive_Summary: str
+    Threat_Actors: List[ThreatActor]
+    TTPs: List[TTP]
+    IOCs: List[IOC]
+    Global_Impact: str
+    Recommendations: List[str]

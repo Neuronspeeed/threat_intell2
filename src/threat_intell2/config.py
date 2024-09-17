@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # OpenAI API configuration
-OPENAI_API_KEY = os.getenv('OPENAI_KEY')
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 DEFAULT_MODEL = "gpt-4"
 
 # Scraping configuration
@@ -15,7 +15,7 @@ HEADERS = {
 
 
 # Number of articles to scrape per website
-ARTICLES_PER_WEBSITE = 1  # Adjust this number as needed
+ARTICLES_PER_WEBSITE = 5  # Adjust this number as needed
 
 # Websites to scrape
 WEBSITES = [
